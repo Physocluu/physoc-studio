@@ -6,7 +6,15 @@ Edit the MONTH / YEAR / EVENTS / FOOTER block at the bottom and run.
 Rows auto-stack and re-balance for any number of events.
 """
 import argparse, html, calendar
-import cairosvg
+try:
+    import cairosvg
+    HAVE_CAIRO = True
+except OSError:
+    # The cairo C library (not the Python package) isn't installed on this
+    # machine. The script still works -- it just can't render PNGs itself.
+    # See the printed note at the end of the run for how to get PNGs anyway.
+    cairosvg = None
+    HAVE_CAIRO = False
 
 INK="#07140E"; NUCLEUS="#0A0810"; LIME="#BFF36A"; LEAF="#8BC34A"
 MINT="#5AD1A0"; FOREST="#2E7D32"; TEAL="#19B89A"; PAPER="#FAFAFA"; META="#5B6472"
@@ -175,8 +183,11 @@ def render(month,year,events,fmt="story",footer="dark",out="calendar.svg"):
     s.append('</svg>')
     svg="\n".join(s)
     open(out,"w").write(to_editable(svg))
-    cairosvg.svg2png(bytestring=svg.encode(), write_to=out.replace(".svg",".png"), output_width=W, output_height=H)
-    print("wrote",out,f"({n} events, {fmt}, {footer} footer)")
+    if HAVE_CAIRO:
+        cairosvg.svg2png(bytestring=svg.encode(), write_to=out.replace(".svg",".png"), output_width=W, output_height=H)
+        print("wrote",out,"and a matching .png",f"({n} events, {fmt}, {footer} footer)")
+    else:
+        print("wrote",out,f"({n} events, {fmt}, {footer} footer) -- PNG skipped, see note below")
 
 # ================== EDIT BELOW ==================
 MONTH, YEAR = 10, 2026
@@ -199,3 +210,19 @@ if __name__=="__main__":
     for f in fmts:
         evs=EVENTS[:4] if f=="square" else EVENTS
         render(MONTH,YEAR,evs,fmt=f,footer=a.footer,out=f"physoc_whatson_{f}.svg")
+    if not HAVE_CAIRO:
+        print("""
+NOTE: PNGs weren't generated because the 'cairo' graphics library isn't
+installed on this machine (this is separate from 'pip install cairosvg').
+Your .svg files are still complete and correct -- to get a PNG, do EITHER:
+
+  A) No install needed: open the .svg in a browser (drag it in) or in Figma
+     -> File/Export as PNG. Quickest if you just want to post today.
+
+  B) Install cairo once, then re-run this script and it'll make PNGs itself:
+       Windows : conda install -c conda-forge cairosvg
+                 (or pip install pycairo after installing the GTK3 runtime)
+       macOS   : brew install cairo
+       Linux   : sudo apt-get install libcairo2   (Debian/Ubuntu)
+                 sudo dnf install cairo            (Fedora)
+""")
