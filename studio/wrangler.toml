@@ -1,0 +1,7 @@
+name = "physocstudio"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "STUDIO_LOGINS"
+id = "89eaf0751ac04432ad7587518f58b200"
