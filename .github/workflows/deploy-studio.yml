@@ -1,0 +1,32 @@
+name: Sync Studio to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'studio/**'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy studio/ into docs/
+        run: |
+          mkdir -p docs
+          cp studio/index.html docs/index.html
+          cp studio/engine.js docs/engine.js
+          cp studio/html-to-image.js docs/html-to-image.js
+          cp studio/templates-data.js docs/templates-data.js
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          git diff --cached --quiet || git commit -m "Sync docs/ from studio/ [skip ci]"
+          git push
