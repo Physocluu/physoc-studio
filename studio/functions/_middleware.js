@@ -1,5 +1,4 @@
 const COOKIE_NAME = "physoc_auth";
-const USER_COOKIE_NAME = "physoc_user";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const LOGIN_TTL = 60 * 60 * 24 * 180; // keep login records 180 days
 
@@ -13,6 +12,20 @@ function getCookie(request, name) {
   const header = request.headers.get("Cookie") || "";
   const match = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+function safeRedirect(value) {
+  const path = String(value || "/");
+  return path.startsWith("/") && !path.startsWith("//") ? path : "/";
+}
+
+function secure(response) {
+  const copy = new Response(response.body, response);
+  copy.headers.set("X-Content-Type-Options", "nosniff");
+  copy.headers.set("Referrer-Policy", "no-referrer");
+  copy.headers.set("X-Frame-Options", "DENY");
+  copy.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return copy;
 }
 
 function renderForm({ failed = false, redirect = "/" } = {}) {
@@ -55,66 +68,24 @@ function renderForm({ failed = false, redirect = "/" } = {}) {
   </form>
 </body>
 </html>`;
-  return new Response(html, { headers: { "content-type": "text/html;charset=utf-8" } });
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-async function renderAdmin(env) {
-  const list = await env.STUDIO_LOGINS.list({ prefix: "login:", limit: 500 });
-  const entries = list.keys
-    .map((k) => ({ time: k.metadata?.time || "", name: k.metadata?.name || "(unknown)" }))
-    .sort((a, b) => (a.time < b.time ? 1 : -1));
-
-  const rows = entries
-    .map(
-      (e) =>
-        `<tr><td>${escapeHtml(new Date(e.time).toLocaleString("en-GB", { timeZone: "Europe/London" }))}</td><td>${escapeHtml(e.name)}</td></tr>`
-    )
-    .join("\n");
-
-  const html = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PhySoc Studio — logins</title>
-<style>
-  :root { color-scheme: dark; }
-  body { margin:0; padding:40px 24px; background:#07140E; color:#FAFAFA;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  p { color:#9CA89F; font-size:14px; margin:0 0 24px; }
-  a { color:#BFF36A; }
-  table { border-collapse:collapse; width:100%; max-width:640px; }
-  th, td { text-align:left; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.1); font-size:14px; }
-  th { color:#9CA89F; font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; }
-</style>
-</head>
-<body>
-  <h1>Recent logins</h1>
-  <p>${entries.length} recorded &middot; <a href="/">back to Studio</a></p>
-  <table>
-    <thead><tr><th>Time (UK)</th><th>Name</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="2">No logins recorded yet.</td></tr>'}</tbody>
-  </table>
-</body>
-</html>`;
-  return new Response(html, { headers: { "content-type": "text/html;charset=utf-8" } });
+  return secure(new Response(html, { headers: { "content-type": "text/html;charset=utf-8" } }));
 }
 
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
-  const expected = await hash(env.SITE_PASSWORD || "");
+  if (typeof env.SITE_PASSWORD !== "string" || env.SITE_PASSWORD.length === 0 || !env.STUDIO_LOGINS) {
+    return new Response("Studio authentication is not configured.", { status: 503 });
+  }
+  const expected = await hash(env.SITE_PASSWORD);
+
+  if (url.pathname.startsWith("/fonts/")) return secure(await next());
 
   if (request.method === "POST" && url.pathname === "/__auth") {
     const form = await request.formData();
     const name = String(form.get("name") || "").trim().slice(0, 80);
     const submitted = await hash(String(form.get("password") || ""));
-    const redirect = String(form.get("redirect") || "/");
+    const redirect = safeRedirect(form.get("redirect"));
 
     if (submitted === expected && name) {
       const time = new Date().toISOString();
@@ -125,7 +96,6 @@ export async function onRequest(context) {
 
       const headers = new Headers({ Location: redirect });
       headers.append("Set-Cookie", `${COOKIE_NAME}=${expected}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`);
-      headers.append("Set-Cookie", `${USER_COOKIE_NAME}=${encodeURIComponent(name)}; Path=/; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`);
       return new Response(null, { status: 302, headers });
     }
     return renderForm({ failed: true, redirect });
@@ -135,9 +105,7 @@ export async function onRequest(context) {
     return renderForm({ redirect: url.pathname + url.search });
   }
 
-  if (url.pathname === "/admin") {
-    return renderAdmin(env);
-  }
+  if (url.pathname === "/admin") return new Response("Not found", { status: 404 });
 
-  return next();
+  return secure(await next());
 }

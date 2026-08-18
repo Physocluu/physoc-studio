@@ -203,6 +203,12 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# PhySoc Studio local state and generated review outputs
+studio/.wrangler/
+studio/node_modules/
+studio/output/
+studio/posters/
+
 # Ruff stuff:
 .ruff_cache/
 

@@ -4,10 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PhySoc Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Baloo+2:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="html-to-image.js"></script>
+<link href="fonts/fonts.css" rel="stylesheet">
 <style>
 /* ---- PhySoc design tokens (so template var(--…) resolve) ---- */
 :root{
@@ -50,6 +47,8 @@ button{font-family:inherit}
 .btn.primary{background:#BFF36A;color:#0A140C;border-color:#BFF36A}
 .btn.primary:hover{filter:brightness(1.05)}
 .btn.ghost{background:transparent}
+.btn:focus-visible,.card:focus-visible,[data-photo]:focus-visible{outline:3px solid #BFF36A;outline-offset:3px}
+.btn:disabled{cursor:not-allowed;opacity:.45}
 /* gallery */
 #gallery{flex:1;overflow:auto;padding:26px 30px 60px}
 .intro{max-width:760px;margin:4px 0 26px}
@@ -57,7 +56,7 @@ button{font-family:inherit}
 .intro p{margin:0;color:#9aa7a0;font-size:15px;line-height:1.5}
 .grp-title{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#7f8c84;margin:26px 0 14px;padding-bottom:8px;border-bottom:1px solid #1c212a}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
-.card{background:#161a21;border:1px solid #232a33;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s}
+.card{width:100%;padding:0;text-align:left;color:inherit;font:inherit;background:#161a21;border:1px solid #232a33;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s}
 .card:hover{transform:translateY(-3px);border-color:#3a4552;box-shadow:0 12px 30px rgba(0,0,0,.35)}
 .thumb{position:relative;width:100%;background:#0b0d11;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .thumb .frame{position:absolute;top:0;left:0;transform-origin:top left;pointer-events:none}
@@ -72,6 +71,7 @@ button{font-family:inherit}
 #stageScaler [data-field]{outline:1px dashed transparent;transition:outline-color .12s;border-radius:3px}
 #stageScaler [data-field]:hover{outline-color:rgba(191,243,106,.55)}
 #stageScaler [data-field]:focus{outline:2px solid #BFF36A;outline-offset:1px}
+#stageScaler .has-overflow{outline:4px solid #ff8a8a !important;outline-offset:2px}
 #stageScaler [data-photo]{cursor:grab}
 #stageScaler [data-photo].empty{cursor:pointer}
 #stageScaler [data-photo].dragging{cursor:grabbing}
@@ -82,6 +82,7 @@ button{font-family:inherit}
 .panel .phead{padding:16px 18px;border-bottom:1px solid #1e232b;display:flex;align-items:center;gap:10px}
 .panel .phead .t{font-weight:700;font-size:16px}
 .panel .phead .d{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#6d7a72;letter-spacing:.08em}
+.draft-state{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:10px;color:#BFF36A;letter-spacing:.08em;text-transform:uppercase}
 .panel .body{flex:1;overflow:auto;padding:6px 18px 24px}
 .panel .foot{flex:0 0 auto;padding:14px 18px;border-top:1px solid #1e232b;display:flex;gap:10px}
 .sec{margin-top:20px}
@@ -97,10 +98,28 @@ button{font-family:inherit}
 .rng{width:100%;accent-color:#BFF36A;margin-top:6px}
 .mini{font-size:11px;color:#6d7a72}
 .emptybadge{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#0A140C;background:#BFF36A;border-radius:999px;padding:2px 8px;letter-spacing:.08em}
+.issues{display:none;margin:14px 18px 0;padding:10px 12px;border:1px solid rgba(255,138,138,.55);border-radius:8px;background:rgba(255,138,138,.08);color:#ffc4c4;font-size:12px;line-height:1.4}
+.issues.on{display:block}
 .exporting [data-field]{outline:none !important}
 .exporting [data-photo]{cursor:default !important}
+.exporting *{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1f27;border:1px solid #3a434f;color:#e8ece9;padding:12px 20px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+@media (max-width:760px){
+  #app{height:auto;min-height:100vh;overflow:visible}
+  .topbar{position:sticky;top:0;z-index:20;padding:10px 12px;gap:8px;flex-wrap:wrap}
+  .topbar .sub{display:none}
+  .btn{padding:8px 12px}
+  #gallery{padding:18px 14px 44px}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  #editor.on{display:flex;flex-direction:column;overflow:visible}
+  .stagewrap{min-height:52vh;height:52vh;flex:0 0 52vh;padding:18px;overflow:hidden}
+  .panel{width:100%;flex:0 0 auto;max-height:none;border-left:0;border-top:1px solid #1e232b}
+  .panel .body{max-height:none;overflow:visible}
+  .panel .foot{position:sticky;bottom:0;z-index:10;background:#12151b}
+}
+@media (max-width:420px){.cards{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto !important;transition:none !important}}
 </style>
 </head>
 <body>
@@ -120,8 +139,8 @@ button{font-family:inherit}
   <div class="topbar">
     <div class="mark"><span class="wm">PhySoc<span class="dot">.</span></span><span class="studio">Studio</span></div>
     <div class="spacer"></div>
-    <button class="btn ghost" id="backBtn" style="display:none">← All templates</button>
-    <button class="btn primary" id="dlBtn" style="display:none">Download PNG</button>
+    <button type="button" class="btn ghost" id="backBtn" style="display:none">← All templates</button>
+    <button type="button" class="btn primary" id="dlBtn" style="display:none">Download PNG</button>
   </div>
 
   <div id="gallery">
@@ -134,11 +153,12 @@ button{font-family:inherit}
   <div id="editor">
     <div class="stagewrap"><div id="stageScaler"></div></div>
     <div class="panel">
-      <div class="phead"><div><div class="t" id="pName">Template</div><div class="d" id="pDim"></div></div></div>
+      <div class="phead"><div><div class="t" id="pName">Template</div><div class="d" id="pDim"></div></div><span class="draft-state" id="draftState" aria-live="polite"></span></div>
+      <div class="issues" id="issues" role="status" aria-live="polite"></div>
       <div class="body" id="pBody"></div>
       <div class="foot">
-        <button class="btn ghost" id="resetBtn" style="flex:0 0 auto">Reset</button>
-        <button class="btn primary" id="dlBtn2" style="flex:1;justify-content:center">Download PNG</button>
+        <button type="button" class="btn ghost" id="resetBtn" style="flex:0 0 auto">Reset</button>
+        <button type="button" class="btn primary" id="dlBtn2" style="flex:1;justify-content:center">Download PNG</button>
       </div>
     </div>
   </div>
@@ -146,6 +166,7 @@ button{font-family:inherit}
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 <div class="toast" id="toast"></div>
 <script src="templates-data.js"></script>
+<script src="announcement-template.js"></script>
 <script src="engine.js"></script>
 </body>
 </html>

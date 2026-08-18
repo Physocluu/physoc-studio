@@ -1,40 +1,37 @@
-name: Sync Studio to Pages
+name: Deploy Studio to Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'studio/**'
+      - '.github/workflows/deploy-studio.yml'
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  sync:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy studio/ into docs/
-        run: |
-          mkdir -p docs
-          cp studio/index.html docs/index.html
-          cp studio/engine.js docs/engine.js
-          cp studio/html-to-image.js docs/html-to-image.js
-          cp studio/templates-data.js docs/templates-data.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
 
-      - name: Commit and push if changed
+      - name: Install and test Studio
+        working-directory: studio
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/
-          git diff --cached --quiet || git commit -m "Sync docs/ from studio/ [skip ci]"
-          git push
+          npm ci
+          npm run smoke
 
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: studio
-        run: npx wrangler pages deploy . --project-name=physocstudio --branch=main
+        run: npx wrangler pages deploy --project-name=physocstudio --branch=main

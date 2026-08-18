@@ -1,0 +1,15 @@
+{
+  "name": "physoc-studio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-runtime.mjs",
+    "smoke": "npm run build && node smoke.mjs",
+    "dev": "npm run build && wrangler pages dev",
+    "deploy": "npm run smoke && wrangler pages deploy"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0",
+    "wrangler": "^4.115.0"
+  }
+}
