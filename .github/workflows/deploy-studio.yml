@@ -27,6 +27,7 @@ jobs:
         working-directory: studio
         run: |
           npm ci
+          npx playwright install --with-deps chromium
           npm run smoke
 
       - name: Deploy to Cloudflare Pages

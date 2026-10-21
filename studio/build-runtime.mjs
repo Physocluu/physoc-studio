@@ -3,8 +3,9 @@ import { cp, mkdir, rm } from "node:fs/promises";
 const dist = new URL("./dist/", import.meta.url);
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
-for (const file of ["index.html", "engine.js", "templates-data.js", "announcement-template.js"]) {
+const files = ["index.html", "engine.js", "templates-data.js", "announcement-template.js", "social-templates.js"];
+for (const file of files) {
   await cp(new URL(`./${file}`, import.meta.url), new URL(`./dist/${file}`, import.meta.url));
 }
 await cp(new URL("./fonts/", import.meta.url), new URL("./dist/fonts/", import.meta.url), { recursive: true });
-console.log("Built Studio runtime with 4 files and self-hosted fonts.");
+console.log(`Built Studio runtime with ${files.length} files and self-hosted fonts.`);

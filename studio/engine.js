@@ -33,6 +33,7 @@
     root.querySelectorAll("[data-field][data-fkey]").forEach(function(el){ fields[el.getAttribute("data-fkey")]=el.textContent; });
     return {
       fields:fields,
+      carouselVisible:[].map.call(root.querySelectorAll('[data-label="Carousel prompt"]'),function(el){return !el.closest('[data-carousel-hidden]');}),
       schedule:waEvents ? waEvents.map(function(ev){ return {day:ev.day,title:ev.title,meta:ev.meta,cat:ev.cat}; }) : null,
       rowCats:[].map.call(root.querySelectorAll("[data-catrow]"),function(row){return row.getAttribute("data-cat")||"social";}),
       photos:[].map.call(root.querySelectorAll("[data-photo]"),function(slot){var st=photoState.get(slot); return st&&st.url?{url:st.url,zoom:st.zoom,tx:st.tx,ty:st.ty}:null;})
@@ -59,7 +60,7 @@
   function buildGallery(){
     var groups = {};
     TPL.forEach(function(t){ (groups[t.group]=groups[t.group]||[]).push(t); });
-    var order = ["Feed posts","Stories"];
+    var order = ["Social templates","Social photo slides","Feed posts","Stories"];
     var host = $("#groups"); host.innerHTML="";
     order.forEach(function(g){
       if(!groups[g]) return;
@@ -172,8 +173,19 @@
     var input;
     if(el.hasAttribute("data-multiline")){ input=document.createElement("textarea"); }
     else { input=document.createElement("input"); input.type="text"; }
+    input.id="text-"+(el.getAttribute("data-fkey")||"field"); lab.htmlFor=input.id;
     input.value=initial;
-    el.setAttribute("contenteditable","true"); el.setAttribute("spellcheck","false");
+    if(el.getAttribute("data-label")==="Carousel prompt"){
+      var prompts=[].slice.call(root.querySelectorAll('[data-label="Carousel prompt"]'));
+      var index=prompts.indexOf(el), target=el.parentElement.childElementCount===1&&el.parentElement!==root?el.parentElement:el;
+      var toggleLabel=document.createElement("label"),toggle=document.createElement("input");toggle.type="checkbox";
+      toggle.checked=!(pendingDraft&&pendingDraft.carouselVisible&&pendingDraft.carouselVisible[index]===false);
+      toggleLabel.appendChild(toggle);toggleLabel.appendChild(document.createTextNode(" Show carousel prompt"));
+      wrap.insertBefore(toggleLabel,lab);
+      function applyVisibility(){target.toggleAttribute("data-carousel-hidden",!toggle.checked);input.disabled=!toggle.checked;el.contentEditable=toggle.checked?"true":"false";}
+      applyVisibility();toggle.addEventListener("change",function(){applyVisibility();markDirty();});
+    }
+    if(!el.closest('[data-carousel-hidden]')) el.setAttribute("contenteditable","true"); el.setAttribute("spellcheck","false");
     var lock=false;
     input.addEventListener("input", function(){ lock=true; el.textContent=input.value; lock=false; markDirty(); });
     el.addEventListener("input", function(){ if(!lock) input.value=el.textContent; markDirty(); });
@@ -407,8 +419,9 @@
     var problems=[], prev=stage.style.transform; stage.style.transform="none";
     var rr=root.getBoundingClientRect();
     root.querySelectorAll("[data-field]").forEach(function(el){
+      if(el.closest('[data-carousel-hidden]')) return;
       if(!el.textContent.trim()){ problems.push((el.getAttribute("data-label")||"A text field")+" is empty."); el.classList.add("has-overflow"); }
-      else if(isClipped(el,rr)){ problems.push((el.getAttribute("data-label")||"Text")+" is outside its safe area."); el.classList.add("has-overflow"); }
+      else if(isClipped(el,rr)||(getComputedStyle(el).maxHeight!=="none"&&el.scrollHeight>parseFloat(getComputedStyle(el).maxHeight)+1)){ problems.push((el.getAttribute("data-label")||"Text")+" is outside its safe area."); el.classList.add("has-overflow"); }
     });
     var missing=root.querySelectorAll("[data-photo].empty").length;
     if(missing) problems.push(missing+" photo "+(missing===1?"slot is":"slots are")+" empty.");
@@ -425,14 +438,34 @@
     issuesEl.textContent=problems.length?problems.join(" "):"";
     issuesEl.classList.toggle("on",problems.length>0);
   }
-  function exportHtml(){
+  var fontCssPromise;
+  function exportFonts(){
+    if(!fontCssPromise) fontCssPromise=(async function(){
+      var response=await fetch("fonts/fonts.css");
+      if(!response.ok) throw new Error("Could not load export fonts");
+      var css=await response.text();
+      var urls=Array.from(css.matchAll(/url\("([^"]+)"\)/g));
+      for(var match of urls){
+        var font=await fetch("fonts/"+match[1]);
+        if(!font.ok) throw new Error("Could not load export font: "+match[1]);
+        var bytes=new Uint8Array(await font.arrayBuffer()),binary="";
+        for(var i=0;i<bytes.length;i+=32768) binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+32768));
+        css=css.replace(match[0],'url("data:font/ttf;base64,'+btoa(binary)+'")');
+      }
+      return css;
+    })().catch(function(err){fontCssPromise=null;throw err;});
+    return fontCssPromise;
+  }
+  async function exportHtml(){
+    var width=current.w,height=current.h;
     var clone=root.cloneNode(true);
+    clone.querySelectorAll('[data-carousel-hidden]').forEach(function(el){el.remove();});
     clone.querySelectorAll("[contenteditable]").forEach(function(el){el.removeAttribute("contenteditable");el.removeAttribute("spellcheck");});
     clone.querySelectorAll(".has-overflow").forEach(function(el){el.classList.remove("has-overflow");});
     var css=[].map.call(document.querySelectorAll("style"),function(el){return el.textContent;}).join("\n");
     var base=location.origin+location.pathname.replace(/[^/]*$/,"");
     var origin=location.origin;
-    return '<!doctype html><html><head><meta charset="utf-8"><base href="'+base+'"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: blob:; style-src \'unsafe-inline\' '+origin+'; font-src '+origin+'"><link rel="stylesheet" href="fonts/fonts.css"><style>html,body{margin:0;width:'+current.w+'px;height:'+current.h+'px;overflow:hidden}'+css+'</style></head><body>'+clone.outerHTML+'</body></html>';
+    return '<!doctype html><html><head><meta charset="utf-8"><base href="'+base+'"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: blob:; style-src \'unsafe-inline\' '+origin+'; font-src data:"><style>'+(await exportFonts())+'html,body{margin:0;width:'+width+'px;height:'+height+'px;overflow:hidden}'+css+'</style></head><body>'+clone.outerHTML+'</body></html>';
   }
   async function download(){
     if(!current||!root) return;
@@ -442,7 +475,7 @@
     toast("Rendering in Chromium…"); stage.classList.add("exporting");
     try{
       if(document.fonts) await document.fonts.ready;
-      var response=await fetch("api/export",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:current.name,width:current.w,height:current.h,html:exportHtml()})});
+      var response=await fetch("api/export",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:current.name,width:current.w,height:current.h,html:await exportHtml()})});
       if(!response.ok) throw new Error((await response.text())||("Export failed with "+response.status));
       var blob=await response.blob(), bytes=new Uint8Array(await blob.arrayBuffer());
       if(bytes.length<24||bytes[0]!==137||bytes[1]!==80||bytes[2]!==78||bytes[3]!==71) throw new Error("Export service did not return a PNG");
