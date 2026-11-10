@@ -21,10 +21,10 @@
   var css = `<style>
   .social-template{position:relative;overflow:hidden;font-family:'Space Grotesk',sans-serif;color:#07140E;background:#FAFAFA;--social-title:134px;--social-title-room:290px}
   .social-template *{box-sizing:border-box}
-  .social-template .social-safe{position:absolute;inset:0;padding:70px 76px 58px;display:flex;flex-direction:column}
-  .social-template header{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-shrink:0}
-  .social-template .social-logo{display:flex;align-items:center;gap:12px;font-size:40px;font-weight:700;letter-spacing:-1px;white-space:nowrap}
-  .social-template .social-logo svg{width:48px;height:48px}
+  .social-template .social-safe{position:absolute;inset:0;padding:84px;display:flex;flex-direction:column}
+  .social-template header{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-shrink:0;min-height:49px}
+  .social-template .social-logo{display:flex;align-items:center;gap:13px;font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1;white-space:nowrap}
+  .social-template .social-logo svg{width:41px;height:41px;flex:none}
   .social-template [data-field]{display:block;white-space:pre-line;overflow:hidden;overflow-wrap:break-word;min-height:1em;padding-bottom:.3em}
   .social-template .social-tag{font-size:28px;line-height:1.25;max-width:460px;max-height:90px;text-align:right}
   .social-template h2{font-family:'Baloo 2',sans-serif;font-size:var(--social-title);line-height:.98;letter-spacing:-3px;margin:0;font-weight:700;max-height:calc(var(--social-title-room) + .3em)}
@@ -34,7 +34,7 @@
   .social-template .social-details{position:relative;flex-shrink:0;display:flex;flex-direction:column;gap:8px;font-size:40px;line-height:1.22;margin-top:auto}
   .social-template .social-details [data-field]{max-height:120px}
   .social-template .social-welcome{font-family:'Baloo 2',sans-serif;font-size:35px;line-height:1.15;max-height:110px;margin:28px 0 0}
-  .social-template .social-handle{font-size:24px;line-height:1.2;margin:22px 0 0;max-height:40px}
+  .social-template .social-handle{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;letter-spacing:0.22em;padding-left:0.22em;text-transform:uppercase;text-align:center;line-height:normal;margin:22px 0 2px;max-height:40px;padding-bottom:0}
   .social-template.sober:before{content:'';position:absolute;width:1100px;height:1100px;border-radius:50%;background:#BFF36A;opacity:.25;left:390px;top:480px}
   .social-template.sober h2{color:#0F3322}
   .social-template.sober .social-tag{border-bottom:3px solid #2E7D32;padding-bottom:6px;color:#2E7D32}
